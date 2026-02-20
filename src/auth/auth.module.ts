@@ -4,6 +4,8 @@ import { AuthService } from './auth.service';
 import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { JWTStrategy } from './strategy/auth.strategy';
+import { UserModule } from 'src/modules/user/user.module';
 
 @Module({
   imports:[
@@ -16,9 +18,11 @@ import { ConfigService } from '@nestjs/config';
           expiresIn: config.getOrThrow('JWT_ACCESS_EXPIRES_IN')
         }
       })
-    })
+    }),
+    UserModule
   ],
   controllers: [AuthController],
-  providers: [AuthService]
+  providers: [AuthService,JWTStrategy],
+  exports:[PassportModule]
 })
 export class AuthModule {}

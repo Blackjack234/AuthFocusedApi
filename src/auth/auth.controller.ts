@@ -1,4 +1,42 @@
-import { Controller } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, UseGuards, ValidationPipe, Version } from '@nestjs/common';
+import { AuthService } from './auth.service';
+import { AuthGuard } from '@nestjs/passport';
+import { ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
+import { SaveUserDto } from 'src/modules/user/dtos/user.dto';
 
 @Controller('auth')
-export class AuthController {}
+export class AuthController {
+    constructor(private readonly authService:AuthService){}
+
+    @Post('login')
+    async login(@Body(new ValidationPipe({transform:true})) body:any){
+
+        // console.log(body);
+        
+       const fakeUser = {
+        _id:12345,
+        email:body.email
+       }
+
+       return await this.authService.login(fakeUser)
+    }
+
+    @Get('profile')
+    @UseGuards(AuthGuard('jwt'))
+    @ApiBearerAuth()
+    async getProfile(@Req() req){
+     return {
+        message:'protected route',
+        user:req.user
+     }
+    }
+
+
+    @Version('1')
+    @Post('register')
+    @ApiConsumes('application/json')
+    @HttpCode(201)
+    async RegisterUser(@Body(new ValidationPipe({transform:true})) body:SaveUserDto){
+      return await this.authService.registerUser(body)
+    }
+}

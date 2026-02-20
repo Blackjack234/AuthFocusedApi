@@ -1,6 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PassportStrategy } from "@nestjs/passport";
+import { Request } from "express";
 import {ExtractJwt, Strategy} from 'passport-jwt'
 
 @Injectable()
@@ -13,7 +14,13 @@ constructor(readonly configService:ConfigService){
    })
 }
 
-    async validate(payload: any) {
-        return payload; // attaches to req.user
+    async validate(request:Request,payload: any) {
+
+        console.log('JWT payload',payload);
+        
+        return {
+            id:payload.sub,
+            email:payload.email
+        }; // attaches to req.user
     }
 }

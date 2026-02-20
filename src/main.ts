@@ -1,13 +1,37 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { Logger } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as bodyParser from 'body-parser';
+import { crossEnv } from 'cross-env';
+import * as  compression from 'compression';
+import helmet from 'helmet';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+
+  app.use(bodyParser.json())
+  app.enableCors({
+    origin:'*',
+    methods:['GET','POST','PUT','DELETE','PATCH'],
+    credentials:true
+  })
+  app.use(compression())
+  app.use(helmet({
+    crossOriginResourcePolicy: false
+  }))
+  app.useGlobalPipes(new ValidationPipe({
+    whitelist: true
+  }))
+
+
   const configService = app.get(ConfigService)
   const logger = app.get(Logger)
+
+
 
   if (configService.getOrThrow<string>('NODE_ENV') === 'development') {
     const createConfig = (title: string, description: string) => {
@@ -32,24 +56,24 @@ async function bootstrap() {
     const document = SwaggerModule.createDocument(app, configApi)
 
     SwaggerModule.setup(
-      'apidoc/v1/user', 
-      app, 
+      'apidoc/v1/user',
+      app,
       {
-      ...document,
-      paths: Object.fromEntries(
-        Object.entries(document.paths).filter(
-          ([key]) =>
-            !key.includes('admin') || (key.includes('auth') && !key.includes('login-admin') && !key.includes('logout-admin'))
+        ...document,
+        paths: Object.fromEntries(
+          Object.entries(document.paths).filter(
+            ([key]) =>
+              !key.includes('admin') || (key.includes('auth') && !key.includes('login-admin') && !key.includes('logout-admin'))
+          )
         )
-      )
-    }, 
-    {
-      swaggerOptions: {
-        defaultModelsExpandDepth: -1, // Hides the Schemas section
       },
-      jsonDocumentUrl: 'apidoc/v1/user/openapi.json',
-    },
-  )
+      {
+        swaggerOptions: {
+          defaultModelsExpandDepth: -1, // Hides the Schemas section
+        },
+        jsonDocumentUrl: 'apidoc/v1/user/openapi.json',
+      },
+    )
   }
 
 
