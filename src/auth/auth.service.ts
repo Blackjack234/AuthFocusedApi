@@ -1,11 +1,14 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { RefreshTokenRepository } from 'src/modules/refresh_token/repositories/refresh_token.repository';
 import { SaveUserDto } from 'src/modules/user/dtos/user.dto';
 import { UserRepository } from 'src/modules/user/repositories/user.repository';
 import { User, UserDocument } from 'src/modules/user/schemas/user.schema';
+import { LoginDto } from './dto/login.dto';
+import { compare } from 'bcrypt';
 
 @Injectable()
 export class AuthService {
@@ -15,19 +18,38 @@ export class AuthService {
         private readonly configService : ConfigService,
 
         private readonly userRepository : UserRepository,
+
+        private readonly refreshTokenRepository: RefreshTokenRepository,
         @InjectModel(User.name) private readonly UserModel : Model<UserDocument>
     ){}
 
-    async login(user:any){
-      const payload = {
-        sub:user._id,
-        email:user.email
+    async login(dto:LoginDto){
+      
+      const user = await this.userRepository.getByField({email:dto.email})
+
+      if(!user){
+         throw new UnauthorizedException('Invalid credential.')
       }
 
-      const accessToken = await this.jwtService.signAsync(payload)
+      const passwordhash = await compare(dto.password,user.password)
+
+      if(!passwordhash){
+       throw new UnauthorizedException('Invalid password.')
+      } 
+
+      const tokens = await this.generateToken(user._id.toString(),dto.email)
+
+
+      const storeRefreshToken = await this.refreshTokenRepository.create({userId:user._id,hash:tokens.refreshToken})
+
 
       return {
-        accessToken
+        message:"Login successful.",
+        data:{
+          userData:user,
+          accessToken:tokens.accessToken,
+          refreshToken:tokens.refreshToken
+        }
       }
     }
 
@@ -76,13 +98,15 @@ export class AuthService {
 
        const tokens = await this.generateToken(savedUser._id.toString(),savedUser.email)
 
-       const updateToken  = await this.userRepository.updateById({refreshToken:tokens.refreshToken},savedUser._id)
+      //  const updateToken  = await this.userRepository.updateById({refreshToken:tokens.refreshToken},savedUser._id)
+
+      const updateToken = await this.refreshTokenRepository.create({hash:tokens.refreshToken,userId:savedUser._id})
 
        if(!updateToken){
-         throw new Error('update is not done')
+         throw new Error('Refresh token is not same.')
        }
 
-       const getUser = await this.userRepository.getById(updateToken._id)
+       const getUser = await this.userRepository.getById(savedUser._id)
 
        if(!getUser){
          throw new Error('User not found/user missing.')

@@ -3,22 +3,19 @@ import { AuthService } from './auth.service';
 import { AuthGuard } from '@nestjs/passport';
 import { ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { SaveUserDto } from 'src/modules/user/dtos/user.dto';
+import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
     constructor(private readonly authService:AuthService){}
 
     @Post('login')
-    async login(@Body(new ValidationPipe({transform:true})) body:any){
+    async login(@Body(new ValidationPipe({ transform: true })) body: LoginDto){
 
         // console.log(body);
-        
-       const fakeUser = {
-        _id:12345,
-        email:body.email
-       }
+    
 
-       return await this.authService.login(fakeUser)
+       return await this.authService.login(body)
     }
 
     @Get('profile')
