@@ -23,6 +23,6 @@ export class UserRepository {
     }
 
     async updateById(data:any,id:string | Types.ObjectId){
-      return await this.userModel.findByIdAndUpdate(id,data,{new:true})
+      return await this.userModel.findByIdAndUpdate(id,data,{returnDocument:'after'})
     }
 }

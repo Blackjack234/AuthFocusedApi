@@ -26,14 +26,14 @@ export class User {
 export const UserSchema = SchemaFactory.createForClass(User)
 
 
-UserSchema.pre('save', async function (next: any) {
+UserSchema.pre('save', async function () {
     let user = this as UserDocument
 
-    if (!user.isModified('password')) return next()
+    if (!user.isModified('password')) return ;
 
     const salt = await genSalt(10)
     const hash = hashSync(this.password, salt)
     user.password = hash
-    next()
+    // next()
 
 })
