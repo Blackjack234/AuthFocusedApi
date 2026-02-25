@@ -78,7 +78,7 @@ async function bootstrap() {
 
 
   await app.listen(process.env.PORT ?? 3200, () => {
-    logger.debug(`[${configService.get('PROJECT_NAME')} | ${configService.get('NODE_ENV')}] is running: http://127.0.0.1:${configService.get('PORT')}/apidoc/v1`)
+    logger.debug(`[${configService.get('PROJECT_NAME')} | ${configService.get('NODE_ENV')}] is running: http://127.0.0.1:${configService.get('PORT')}/apidoc/v1/user`)
   });
 }
 bootstrap();

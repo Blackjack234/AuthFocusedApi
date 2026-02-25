@@ -8,7 +8,8 @@ import { SaveUserDto } from 'src/modules/user/dtos/user.dto';
 import { UserRepository } from 'src/modules/user/repositories/user.repository';
 import { User, UserDocument } from 'src/modules/user/schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
-import { compare } from 'bcrypt';
+import { compare, hash } from 'bcrypt';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuthService {
@@ -55,10 +56,13 @@ export class AuthService {
 
 
     async generateToken(userId:string,email:string){
-        const payload = {
-            sub : userId,
-            email:email
-        }
+      const jti = randomUUID();
+
+      const payload = {
+        sub: userId,
+        email,
+        jti,
+      };
 
         const accessToken = await this.jwtService.signAsync(payload,{
             secret:this.configService.get('JWT_ACCESS_SECRET'),
@@ -73,7 +77,8 @@ export class AuthService {
 
         return {
             accessToken,
-            refreshToken
+            refreshToken,
+            jti
         }
 
     }
@@ -96,15 +101,34 @@ export class AuthService {
           throw new BadRequestException('something went wrong.')
        }
 
-       const tokens = await this.generateToken(savedUser._id.toString(),savedUser.email)
 
       //  const updateToken  = await this.userRepository.updateById({refreshToken:tokens.refreshToken},savedUser._id)
 
-      const updateToken = await this.refreshTokenRepository.create({hash:tokens.refreshToken,userId:savedUser._id})
+      const tokens = await this.generateToken(
+        savedUser._id.toString(),
+        savedUser.email,
+      );
 
-       if(!updateToken){
-         throw new Error('Refresh token is not same.')
-       }
+      // 🔐 Hash refresh token
+      const hashedRefreshToken = await hash(
+        tokens.refreshToken,
+        10,
+      );
+
+      // 📅 Calculate expiry date
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      await this.refreshTokenRepository.create({
+        hash: hashedRefreshToken,
+        userId: savedUser._id,
+        jti: tokens.jti,
+        expiresAt,
+        isRevoked: false,
+      });
+
+
+
 
        const getUser = await this.userRepository.getById(savedUser._id)
 
