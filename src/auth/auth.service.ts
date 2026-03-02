@@ -38,10 +38,31 @@ export class AuthService {
        throw new UnauthorizedException('Invalid password.')
       } 
 
-      const tokens = await this.generateToken(user._id.toString(),dto.email)
+      // const tokens = await this.generateToken(user._id.toString(),dto.email)
 
 
-      const storeRefreshToken = await this.refreshTokenRepository.create({userId:user._id,hash:tokens.refreshToken})
+      const tokens = await this.generateToken(
+        user._id.toString(),
+        user.email,
+      );
+
+      // 🔐 Hash refresh token
+      const hashedRefreshToken = await hash(
+        tokens.refreshToken,
+        10,
+      );
+
+      // 📅 Calculate expiry date
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+
+      await this.refreshTokenRepository.create({
+        hash: hashedRefreshToken,
+        userId: user._id,
+        jti: tokens.jti,
+        expiresAt,
+        isRevoked: false,
+      });
 
 
       return {
@@ -147,4 +168,97 @@ export class AuthService {
        }
 
     }
+
+
+    async refresh(refreshToken:string){
+     let payload :any;
+
+     try{
+      payload = await this.jwtService.verifyAsync(refreshToken,{
+        secret: this.configService.getOrThrow('JWT_REFRESH_SECRET')
+      })
+     }catch{
+       throw new UnauthorizedException('Invalid refresh token.')
+     }
+
+     const {
+      sub:userId,
+      jti,
+      email
+     } = payload
+
+
+     const tokenDoc = await this.refreshTokenRepository.findOne({jti})
+
+     if(!tokenDoc){
+        throw new UnauthorizedException('Session not found.')
+     }
+
+     if(tokenDoc.isRevoked){
+      throw new UnauthorizedException('Token Revoked.')
+     }
+
+     if(tokenDoc.expiresAt < new Date()){
+       throw new UnauthorizedException('Token expired.')
+     }
+    const isMatch = await compare(refreshToken,tokenDoc.hash)
+
+    if(!isMatch){
+      throw new UnauthorizedException('token mismatch.')
+    }
+
+    //ROTATION STARTS HERE
+
+    tokenDoc.isRevoked = true
+    await tokenDoc.save()
+
+    const newToken = await this.generateToken(userId,email)
+
+    const hashedRefreshToken = await hash(newToken.refreshToken,10)
+
+    const expiresAt = new Date()
+    expiresAt.setDate(expiresAt.getDate() + 7);
+
+    await this.refreshTokenRepository.create({
+      userId,
+      hash:hashedRefreshToken,
+      jti:newToken.jti,
+      expiresAt,
+      isRevoked:false
+    })
+      return newToken
+    }
+
+  async logout(refreshToken: string) {
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token required');
+    }
+
+    let payload: any;
+
+    try {
+      payload = await this.jwtService.verifyAsync(refreshToken, {
+        secret: this.configService.get('JWT_REFRESH_SECRET'),
+      });
+    } catch {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const { jti } = payload;
+
+    const tokenDoc = await this.refreshTokenRepository.findOne({ jti });
+
+    if (!tokenDoc) {
+      throw new UnauthorizedException('Session not found');
+    }
+
+    if (tokenDoc.isRevoked) {
+      return { message: 'Already logged out' };
+    }
+
+    tokenDoc.isRevoked = true;
+    await tokenDoc.save();
+
+    return { message: 'Logged out successfully' };
+  }
 }
