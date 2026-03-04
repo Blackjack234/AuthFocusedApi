@@ -5,6 +5,9 @@ import { ApiBearerAuth, ApiConsumes } from '@nestjs/swagger';
 import { SaveUserDto } from 'src/modules/user/dtos/user.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh.dto';
+import { RBAcGuard } from 'src/guard/role.guard';
+import { Roles } from 'src/decorators/role.decorator';
+import { UserRoleEnum } from 'src/enum/user-role.enum';
 
 @Controller('auth')
 export class AuthController {
@@ -23,7 +26,10 @@ export class AuthController {
     }
 
     @Get('profile')
-    @UseGuards(AuthGuard('jwt'))
+    @ApiConsumes('application/json')
+    @Roles(UserRoleEnum.USER)
+    @UseGuards(AuthGuard('jwt'),RBAcGuard)
+    
     @ApiBearerAuth()
     async getProfile(@Req() req){
      return {

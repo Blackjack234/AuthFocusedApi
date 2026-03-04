@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from "@nestjs/mongoose";
-import { HydratedDocument } from "mongoose";
+import { HydratedDocument, Mongoose, Types } from "mongoose";
 import { genSalt, hash, hashSync } from 'bcrypt'
+import { statusEnum } from "src/enum/status.enum";
 
 export type UserDocument = HydratedDocument<User>
 
@@ -16,8 +17,14 @@ export class User {
     @Prop({ required: true })
     password: string;
 
+    @Prop({type:Types.ObjectId,ref:'Role',index:true,})
+    role:Types.ObjectId | string
+
     @Prop({ type: Boolean, default: false })
     isDeleted: boolean;
+
+    @Prop({type:String,default:'Active',enum:statusEnum})
+    status:String;
 
     @Prop({ type: String, default: null })
     refreshToken?: string | null;
