@@ -1,15 +1,16 @@
-import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
+import { compare, hash } from 'bcrypt';
+import { randomUUID } from 'crypto';
 import { Model } from 'mongoose';
 import { RefreshTokenRepository } from 'src/modules/refresh_token/repositories/refresh_token.repository';
 import { SaveUserDto } from 'src/modules/user/dtos/user.dto';
 import { UserRepository } from 'src/modules/user/repositories/user.repository';
 import { User, UserDocument } from 'src/modules/user/schemas/user.schema';
 import { LoginDto } from './dto/login.dto';
-import { compare, hash } from 'bcrypt';
-import { randomUUID } from 'crypto';
+import { RoleRepository } from 'src/modules/role/repositories/role.repository';
 
 @Injectable()
 export class AuthService {
@@ -21,7 +22,8 @@ export class AuthService {
         private readonly userRepository : UserRepository,
 
         private readonly refreshTokenRepository: RefreshTokenRepository,
-        @InjectModel(User.name) private readonly UserModel : Model<UserDocument>
+        @InjectModel(User.name) private readonly UserModel : Model<UserDocument>,
+        private readonly roleRepository:RoleRepository
     ){}
 
     async login(dto:LoginDto){
@@ -40,10 +42,13 @@ export class AuthService {
 
       // const tokens = await this.generateToken(user._id.toString(),dto.email)
 
+      const userRole = await this.roleRepository.findById(user.role)
+
 
       const tokens = await this.generateToken(
         user._id.toString(),
         user.email,
+        userRole?.role
       );
 
       // 🔐 Hash refresh token
@@ -76,12 +81,13 @@ export class AuthService {
     }
 
 
-    async generateToken(userId:string,email:string){
+    async generateToken(userId:string,email:string,role?:string){
       const jti = randomUUID();
 
       const payload = {
         sub: userId,
         email,
+        role,
         jti,
       };
 
@@ -116,7 +122,17 @@ export class AuthService {
           throw new BadRequestException('User Already Exists.')
        }
 
-       const savedUser = await this.userRepository.saveUser(payload)
+       const userRole = await this.roleRepository.findOne({role: 'user'})
+       if(!userRole){
+         throw new NotFoundException('Role not found.') 
+       }
+
+       let userPayload = {
+        ... payload,
+        role:userRole._id
+       }
+
+      const savedUser = await this.userRepository.saveUser(userPayload)
 
        if(!savedUser._id){
           throw new BadRequestException('something went wrong.')
@@ -128,6 +144,7 @@ export class AuthService {
       const tokens = await this.generateToken(
         savedUser._id.toString(),
         savedUser.email,
+        userRole.role
       );
 
       // 🔐 Hash refresh token

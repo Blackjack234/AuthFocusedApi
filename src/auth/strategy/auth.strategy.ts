@@ -20,7 +20,8 @@ constructor(readonly configService:ConfigService){
         
         return {
             id:payload.sub,
-            email:payload.email
+            email:payload.email,
+            role:payload.role
         }; // attaches to req.user
     }
 }

@@ -3,6 +3,7 @@ import {
     UpdateQuery,
     QueryOptions,
     FilterQuery,
+    Types,
 } from 'mongoose';
 
 export abstract class BaseRepository<TDocument> {
@@ -21,7 +22,7 @@ export abstract class BaseRepository<TDocument> {
         return this.model.findOne(filter).exec();
     }
 
-    async findById(id: string): Promise<TDocument | null> {
+    async findById(id: string | Types.ObjectId): Promise<TDocument | null> {
         return this.model.findById(id).exec();
     }
 

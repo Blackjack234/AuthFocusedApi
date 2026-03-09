@@ -8,6 +8,7 @@ import { JWTStrategy } from './strategy/auth.strategy';
 import { UserModule } from 'src/modules/user/user.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { RefreshToken, RefreshTokenSchema } from 'src/modules/refresh_token/schema/refresh_token.schema';
+import { RoleModule } from 'src/modules/role/role.module';
 
 @Module({
   imports:[
@@ -24,7 +25,8 @@ import { RefreshToken, RefreshTokenSchema } from 'src/modules/refresh_token/sche
         }
       })
     }),
-    UserModule
+    UserModule,
+    RoleModule
   ],
   controllers: [AuthController],
   providers: [AuthService,JWTStrategy],
