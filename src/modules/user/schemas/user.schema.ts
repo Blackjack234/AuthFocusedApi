@@ -20,6 +20,12 @@ export class User {
     @Prop({type:Types.ObjectId,ref:'Role',index:true,})
     role:Types.ObjectId | string
 
+    @Prop({ type: Number, default: 0 })
+    failedLoginAttempts: number;
+
+    @Prop({ type: Date, default: null })
+    lockUntil?: Date | null;
+
     @Prop({ type: Boolean, default: false })
     isDeleted: boolean;
 

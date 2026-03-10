@@ -34,11 +34,29 @@ export class AuthService {
          throw new UnauthorizedException('Invalid credential.')
       }
 
+      if(user.lockUntil && user.lockUntil > new Date()){
+         throw new UnauthorizedException(`Account locked until ${user.lockUntil.toLocaleString()}. Please try again later.`)
+      }
+
       const passwordhash = await compare(dto.password,user.password)
 
       if(!passwordhash){
+        user.failedLoginAttempts += 1;
+        if(user.failedLoginAttempts >= this.configService.get('MAX_LOGIN_ATTEMPTS')){
+          // console.log(this.configService.get('LOCK_TIME'));
+          const lockTime = Number(this.configService.getOrThrow('LOCK_TIME'));
+          user.lockUntil = new Date(Date.now() + lockTime);
+        }
+
+
+        await user.save()
+
        throw new UnauthorizedException('Invalid password.')
       } 
+
+      user.failedLoginAttempts = 0;
+      user.lockUntil = null;
+      await user.save()
 
       // const tokens = await this.generateToken(user._id.toString(),dto.email)
 
