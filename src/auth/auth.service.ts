@@ -230,7 +230,9 @@ export class AuthService {
      }
 
      if(tokenDoc.isRevoked){
-      throw new UnauthorizedException('Token Revoked.')
+      await this.refreshTokenRepository.updateMany({userId},{isRevoked:true})
+
+       throw new UnauthorizedException('Refresh token reuse detected. All sessions revoked.')
      }
 
      if(tokenDoc.expiresAt < new Date()){
