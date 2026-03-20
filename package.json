@@ -18,7 +18,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "migrate" : "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/migrate.ts"
+    "migrate": "cross-env NODE_ENV=development ts-node -r tsconfig-paths/register src/migrate.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -33,6 +33,7 @@
     "@types/compression": "^1.8.1",
     "@types/mongoose": "^5.11.97",
     "@types/passport-jwt": "^4.0.1",
+    "@types/stripe": "^8.0.417",
     "bcrypt": "^6.0.0",
     "body-parser": "^2.2.2",
     "class-transformer": "^0.5.1",
@@ -46,6 +47,7 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "stripe": "^20.4.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
